@@ -48,6 +48,7 @@ grep "version => \"2" gr740-candriver_iv.aadl >/dev/null && {
     INTERFACEVIEW=__iv_1_3.aadl
 };
 
+DEPLOYMENTVIEW=gr740-candriver_dp.aadl
 if [ -z "$DEPLOYMENTVIEW" ]
 then
     DEPLOYMENTVIEW=DeploymentView.aadl

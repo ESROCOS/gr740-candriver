@@ -7,6 +7,12 @@
 	The driver manager is setup by the orchestrator and/or polyorb-HI-C.
         It is therefore needed that the CONFIGURE_DRIVER_AMBAPP_GAISLER_GRCAN has to be passed to the build system.
         Currently, this is done through a so called TASTE Directive which is setup as a contextual parameter.
+
+	IMPORTANT NOTE II:
+        Whenever possible do NOT declare local variables of considerable size!!!!
+        The default stack size is about 5KB which is easily depleted by e.g. asn1SccBase_commands_Joints.
+        So its better to declare them globally and make one for each use/function.
+        Otherwise, you should generate a ConcurrencyView.pro and modify the stack sizes there (max sum of sizes: 256KByte)
 */
 
 #ifndef CONFIGURE_DRIVER_AMBAPP_GAISLER_GRCAN
@@ -15,6 +21,8 @@
 
 /* RTEMS include files */
 #include <bsp/grcan.h>
+#include <stdint.h>
+#include <time.h>
 
 #ifndef CAN_INTERFACE
 #define CAN_INTERFACE 0
@@ -55,6 +63,18 @@ static const struct grcan_selection CAN_CHAN_SEL[CAN_CHAN_SEL_NUM] = {
 #define CANDRIVER_MAX_READ_ATTEMPTS	10
 static bool requestTransmitted = false;
 static unsigned responseReadAttempts = 0;
+
+static CANMsg telemetryRequest;
+static CANMsg telemetryResponse;
+static CANMsg telecommand;
+static asn1SccBase_commands_Joints sample;
+
+uint64_t getTimeInMicroseconds()
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (ts.tv_sec * 1000000 + ts.tv_nsec / 1000);
+}
 
 void gr740_candriver_startup()
 {
@@ -152,8 +172,8 @@ void gr740_candriver_startup()
 void gr740_candriver_PI_update()
 {
     int cnt;
-    CANMsg request;
-    CANMsg response;
+    uint16_t position;
+    float position_deg;
 
     /* 
         Setup CAN message to request sample updates 
@@ -162,12 +182,12 @@ void gr740_candriver_PI_update()
     */
     if (!requestTransmitted)
     {
-        request.extended = 0;
-        request.rtr = 1;
-        request.id = 0x7C0;
-        request.len = 0;
+        telemetryRequest.extended = 0;
+        telemetryRequest.rtr = 1;
+        telemetryRequest.id = 0x7C0;
+        telemetryRequest.len = 0;
         printf("[gr740_candriver_PI_update] Transmitting telemetry request\n");
-        cnt = grcan_write(candev, &request, 1);
+        cnt = grcan_write(candev, &telemetryRequest, 1);
         if (!cnt)
         {
             printf("[gr740_candriver_PI_update] Transmission failed\n");
@@ -181,12 +201,12 @@ void gr740_candriver_PI_update()
     /*
 	If we could transmit a request we have to wait for the DEVICE to respond.
 	According to the ICD, we will get ID='0x1A0' RTR=0 LEN=6 T0,T1,P0,P1,V0,V1 where only P0 and P1 will be populated
-	P0 and P1 are positions where 0 equals to 0 deg and 0xFFFF equals to 360 deg
+	P0,P1 is a position where 0 equals to 0 deg and 0xFFFF equals to 360 deg
     */
     if (requestTransmitted)
     {
         printf("[gr740_candriver_PI_update] Waiting for telemetry\n");
-	cnt = grcan_read(candev, &response, 1);
+	cnt = grcan_read(candev, &telemetryResponse, 1);
         if (cnt < 1)
 	{
             responseReadAttempts++;
@@ -198,27 +218,41 @@ void gr740_candriver_PI_update()
 	    return;
 	}
         printf("[gr740_candriver_PI_update] Got a message. Checking ...\n");
-	if (response.extended != 0)
+	if (telemetryResponse.extended != 0)
 	{
 	    printf("[gr740_candriver_PI_update] Extended ID not supported. Another device present?\n");
 	    return;
 	}
-	if (response.id != 0x1A0)
+	if (telemetryResponse.id != 0x1A0)
 	{
 	    printf("[gr740_candriver_PI_update] Wrong ID. Another device present?\n");
 	    return;
 	}
-	if (response.rtr != 0)
+	if (telemetryResponse.rtr != 0)
 	{
 	    printf("[gr740_candriver_PI_update] RTR set. Bad device?\n");
 	    return;
 	}
-	if (response.len != 6)
+	if (telemetryResponse.len != 6)
 	{
-	    printf("[gr740_candriver_PI_update] Got length %u. Bad device?\n", response.len);
+	    printf("[gr740_candriver_PI_update] Got length %u. Bad device?\n", telemetryResponse.len);
 	    return;
 	}
-        printf("[gr740_candriver_PI_update] Current positions: %u %u\n", response.data[0], response.data[1]);
+	position = telemetryResponse.data[3];
+	position <<= 8;
+	position += telemetryResponse.data[2];
+	position_deg = position * 360.f / 0xFFFF;
+        printf("[gr740_candriver_PI_update] Current position: %u In degrees: %f\n", position, position_deg);
+
+	// Call requested interface
+	// time->microseconds, names->(nCount,arr->(nCount, arr)), elements->(nCount,arr->(position,speed,effort,raw,acceleration))
+	sample.time.microseconds = getTimeInMicroseconds();
+	sample.names.nCount = 1;
+	sample.names.arr[0].nCount = 7;
+	strncpy(sample.names.arr[0].arr, "myJoint", 7);
+	sample.elements.nCount = 1;
+	sample.elements.arr[0].position = position_deg;
+	gr740_candriver_RI_samples(&sample);
         requestTransmitted = false;
     }
 }
@@ -229,19 +263,30 @@ void gr740_candriver_PI_commands(const asn1SccBase_commands_Joints *IN_cmds)
 	Whenever we get an incoming joint command, we have to pass this information to the CAN device.
         According to the ICD, we have to transmit a frame with ID=0x182 RTR=0 LEN=3 MODE,DEMAND_0,DEMAND_1
 	MODE is either 0 for idle or 2 vor velocity control
-	DEMAND_0 and DEMAND_1 are velocity reference values where 0 means -1 rpm and 0xFFFF means +1 rpm
+	DEMAND_0,DEMAND_1 is a velocity reference value where 0 means -1 rpm and 0xFFFF means +1 rpm
     */
+    
+    float velocity_deg;
     int cnt;
-    CANMsg request;
-    request.extended = 0;
-    request.rtr = 0;
-    request.id = 0x182;
-    request.len = 3;
-    request.data[0] = 2; /* Mode: Velocity control */
-    request.data[1] = 0; /* Velocity 0 */
-    request.data[2] = 0; /* Velocity 1 */
-    printf("[gr740_candriver_PI_commands] Transmitting new commands\n");
-    cnt = grcan_write(candev, &request, 1);
+    uint16_t velocity;
+
+    if (IN_cmds->elements.nCount < 1)
+    {
+	printf("[gr740_candriver_PI_commands] Expecting at least one valid command entry\n");
+	return;
+    }
+    velocity_deg = IN_cmds->elements.arr[0].speed;
+    velocity = velocity_deg * 0xFFFF / 6.f;
+
+    telecommand.extended = 0;
+    telecommand.rtr = 0;
+    telecommand.id = 0x182;
+    telecommand.len = 3;
+    telecommand.data[0] = 2; /* Mode: Velocity control */
+    telecommand.data[1] = velocity & 0x00FF; /* Velocity 0 */
+    telecommand.data[2] = (velocity >> 8) & 0x00FF; /* Velocity 1 */
+    printf("[gr740_candriver_PI_commands] Transmitting new velocity command with %u\n", velocity);
+    cnt = grcan_write(candev, &telecommand, 1);
     if (!cnt)
     {
         printf("[gr740_candriver_PI_commands] Transmission failed\n");

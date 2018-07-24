@@ -22,6 +22,8 @@
 /* RTEMS include files */
 #include <bsp/grcan.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 #include <time.h>
 #define _USE_MATH_DEFINES
 #include <math.h>
@@ -172,6 +174,7 @@ void gr740_candriver_startup()
 	return;
     }
     printf("[gr740_candriver_startup] initialization complete :)\n");
+    memset(&sample, 0, sizeof(sample));
 }
 
 void gr740_candriver_PI_update()
@@ -249,14 +252,13 @@ void gr740_candriver_PI_update()
 	position += telemetryResponse.data[2];
 	position_deg = position * 360.f / 0xFFFF;
         position_rad = position_deg * M_PI / 180.f;
-        printf("[gr740_candriver_PI_update] Current position: %u In degrees: %f\n", position, position_deg);
+        printf("[gr740_candriver_PI_update] Current position: %u In degrees: %f In radians: %f\n", position, position_deg, position_rad);
 
 	// Call requested interface
 	// time->microseconds, names->(nCount,arr->(nCount, arr)), elements->(nCount,arr->(position,speed,effort,raw,acceleration))
 	sample.time.microseconds = getTimeInMicroseconds();
 	sample.names.nCount = 1;
-	sample.names.arr[0].nCount = 7;
-	strncpy(sample.names.arr[0].arr, "myJoint", 7);
+	sample.names.arr[0].nCount = snprintf((char *)sample.names.arr[0].arr, 200, "JOINT0");
 	sample.elements.nCount = 1;
 	sample.elements.arr[0].position = position_rad;
 	gr740_candriver_RI_samples(&sample);

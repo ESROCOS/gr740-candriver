@@ -71,6 +71,7 @@ FEATURES
 PROPERTIES
   Source_Language => (C);
   Taste::Active_Interfaces => any;
+  Source_Text => ("gr740_candriver.zip");
 END gr740_candriver;
 
 SYSTEM IMPLEMENTATION gr740_candriver.others

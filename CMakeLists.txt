@@ -40,10 +40,10 @@ esrocos_init()
 esrocos_export_function("gr740_candriver" "gr740/candriver")
 
 #uncomment to export PKG-CONFIG-file
-#esrocos_export_pkgconfig( VERSION 1.0
-#                          DESCRIPTION "none"
-#                          REQUIRES ""
-#                          LIBS ""
-#                          STATIC_LIBS "" 
-#                          C_FLAGS ""
-#                        ) 
+esrocos_export_pkgconfig( VERSION 1.0
+                          DESCRIPTION "none"
+                          REQUIRES ""
+                          LIBS ""
+                          STATIC_LIBS "" 
+                          C_FLAGS ""
+                        ) 

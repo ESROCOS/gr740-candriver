@@ -33,7 +33,7 @@ isImportDeclaration('deploymentview::DV','PUBLIC','Deployment','').
 isProperty('NIL','=>','deploymentview::DV','NIL','NIL','NIL','Taste::coordinates','"0 0 297000 210000"','').
 isProperty('NIL','=>','deploymentview::DV','NIL','NIL','NIL','Taste::version','"1.3"','').
 isProperty('NIL','=>','deploymentview::DV','NIL','NIL','NIL','Taste::interfaceView','"gr740-candriver_iv.aadl"','').
-isProperty('NIL','=>','deploymentview::DV','NIL','NIL','NIL','Taste::HWLibraries','("../../tool-inst/share/ocarina/AADLv2/ocarina_components.aadl")','').
+isProperty('NIL','=>','deploymentview::DV','NIL','NIL','NIL','Taste::HWLibraries','("../../../tool-inst/share/ocarina/AADLv2/ocarina_components.aadl")','').
 isComponentType('deploymentview::DV','PUBLIC','deploymentview','SYSTEM','NIL','').
 isComponentImplementation('deploymentview::DV','PUBLIC','deploymentview','others','SYSTEM','NIL','others','').
 isImportDeclaration('deploymentview::DV','PUBLIC','interfaceview::IV','').

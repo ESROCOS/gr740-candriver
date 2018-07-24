@@ -23,6 +23,11 @@
 #include <bsp/grcan.h>
 #include <stdint.h>
 #include <time.h>
+#define _USE_MATH_DEFINES
+#include <math.h>
+#ifndef M_PI
+#define M_PI 3.1416
+#endif
 
 #ifndef CAN_INTERFACE
 #define CAN_INTERFACE 0
@@ -174,6 +179,7 @@ void gr740_candriver_PI_update()
     int cnt;
     uint16_t position;
     float position_deg;
+    float position_rad;
 
     /* 
         Setup CAN message to request sample updates 
@@ -242,6 +248,7 @@ void gr740_candriver_PI_update()
 	position <<= 8;
 	position += telemetryResponse.data[2];
 	position_deg = position * 360.f / 0xFFFF;
+        position_rad = position_deg * M_PI / 180.f;
         printf("[gr740_candriver_PI_update] Current position: %u In degrees: %f\n", position, position_deg);
 
 	// Call requested interface
@@ -251,7 +258,7 @@ void gr740_candriver_PI_update()
 	sample.names.arr[0].nCount = 7;
 	strncpy(sample.names.arr[0].arr, "myJoint", 7);
 	sample.elements.nCount = 1;
-	sample.elements.arr[0].position = position_deg;
+	sample.elements.arr[0].position = position_rad;
 	gr740_candriver_RI_samples(&sample);
         requestTransmitted = false;
     }
@@ -267,6 +274,7 @@ void gr740_candriver_PI_commands(const asn1SccBase_commands_Joints *IN_cmds)
     */
     
     float velocity_deg;
+    float velocity_rad;
     int cnt;
     uint16_t velocity;
 
@@ -275,7 +283,8 @@ void gr740_candriver_PI_commands(const asn1SccBase_commands_Joints *IN_cmds)
 	printf("[gr740_candriver_PI_commands] Expecting at least one valid command entry\n");
 	return;
     }
-    velocity_deg = IN_cmds->elements.arr[0].speed;
+    velocity_rad = IN_cmds->elements.arr[0].speed;
+    velocity_deg = velocity_rad * 180.f / M_PI;
     velocity = velocity_deg * 0xFFFF / 6.f;
 
     telecommand.extended = 0;

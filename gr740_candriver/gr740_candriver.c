@@ -195,7 +195,9 @@ void gr740_candriver_PI_update()
         telemetryRequest.rtr = 1;
         telemetryRequest.id = 0x7C0;
         telemetryRequest.len = 0;
+#ifdef DEBUG
         printf("[gr740_candriver_PI_update] Transmitting telemetry request\n");
+#endif
         cnt = grcan_write(candev, &telemetryRequest, 1);
         if (!cnt)
         {
@@ -214,7 +216,7 @@ void gr740_candriver_PI_update()
     */
     if (requestTransmitted)
     {
-        printf("[gr740_candriver_PI_update] Waiting for telemetry\n");
+        //printf("[gr740_candriver_PI_update] Waiting for telemetry\n");
 	cnt = grcan_read(candev, &telemetryResponse, 1);
         if (cnt < 1)
 	{
@@ -226,7 +228,9 @@ void gr740_candriver_PI_update()
 	    }
 	    return;
 	}
+#ifdef DEBUG
         printf("[gr740_candriver_PI_update] Got a message. Checking ...\n");
+#endif
 	if (telemetryResponse.extended != 0)
 	{
 	    printf("[gr740_candriver_PI_update] Extended ID not supported. Another device present?\n");
@@ -252,7 +256,9 @@ void gr740_candriver_PI_update()
 	position += telemetryResponse.data[2];
 	position_deg = position * 360.f / 0xFFFF;
         position_rad = position_deg * M_PI / 180.f;
+#ifdef DEBUG
         printf("[gr740_candriver_PI_update] Current position: %u In degrees: %f In radians: %f\n", position, position_deg, position_rad);
+#endif
 
 	// Call requested interface
 	// time->microseconds, names->(nCount,arr->(nCount, arr)), elements->(nCount,arr->(position,speed,effort,raw,acceleration))
@@ -296,7 +302,9 @@ void gr740_candriver_PI_commands(const asn1SccBase_commands_Joints *IN_cmds)
     telecommand.data[0] = 2; /* Mode: Velocity control */
     telecommand.data[1] = velocity & 0x00FF; /* Velocity 0 */
     telecommand.data[2] = (velocity >> 8) & 0x00FF; /* Velocity 1 */
+#ifdef DEBUG
     printf("[gr740_candriver_PI_commands] Transmitting new velocity command with %u\n", velocity);
+#endif
     cnt = grcan_write(candev, &telecommand, 1);
     if (!cnt)
     {

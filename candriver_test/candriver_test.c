@@ -3,6 +3,12 @@
 #include "candriver_test.h"
 #include <stdint.h>
 #include <time.h>
+#include <stdio.h>
+#define _USE_MATH_DEFINES
+#include <math.h>
+#ifndef M_PI
+#define M_PI 3.1416
+#endif
 
 static float velocity_ref_deg = 1.f;
 static asn1SccBase_commands_Joints cmd;
@@ -24,7 +30,8 @@ void candriver_test_startup()
 void candriver_test_PI_samples(const asn1SccBase_commands_Joints *IN_smpls)
 {
     /* Write your code here! */
-    float position_deg = IN_smpls->elements.arr[0].position;
+    float position_rad = IN_smpls->elements.arr[0].position;
+    float position_deg = position_rad * 180.f / M_PI;
     printf("[candriver_test] Current pos: %f\n", position_deg);
     if ((velocity_ref_deg > 0.f) && (position_deg < 90.f))
     {
@@ -45,10 +52,9 @@ void candriver_test_PI_samples(const asn1SccBase_commands_Joints *IN_smpls)
     printf("[candriver_test] New velocity reference: %f\n", velocity_ref_deg);
     cmd.time.microseconds = getTimeInMicroseconds();
     cmd.names.nCount = 1;
-    cmd.names.arr[0].nCount = 7;
-    strncpy(cmd.names.arr[0].arr, "myJoint", 7);
+    cmd.names.arr[0].nCount = snprintf((char*)cmd.names.arr[0].arr, 200, "JOINT0");
     cmd.elements.nCount = 1;
-    cmd.elements.arr[0].speed = velocity_ref_deg;
+    cmd.elements.arr[0].speed = velocity_ref_deg * M_PI / 180.f;
     candriver_test_RI_commands(&cmd);
 }
 

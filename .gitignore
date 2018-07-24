@@ -1,0 +1,7 @@
+.cache
+*.md5
+binary.c
+*.old
+*.pro
+*.zip
+__*.aadl

@@ -28,3 +28,7 @@ or you have to make some local variables global to reduce the amount of stack si
 When you use this component in combination with another target like an **x86/linux** system
 be **aware** that you should change the encoding to **UPER**.
 Otherwise you might get garbage from the GR740 or the Linux system.
+
+## Validation test at AIRBUS, Stevenage, UK
+
+* Telemetry data length was 7 not 6 as documented in the ICD

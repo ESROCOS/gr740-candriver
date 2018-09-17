@@ -293,7 +293,7 @@ void gr740_candriver_PI_commands(const asn1SccBase_commands_Joints *IN_cmds)
     }
     velocity_rad = IN_cmds->elements.arr[0].speed;
     velocity_deg = velocity_rad * 180.f / M_PI;
-    velocity = velocity_deg * 0xFFFF / 6.f;
+    velocity = velocity_deg * 0xFFFF / 12.f + 0x8000; // v_in_deg / (720 / 60) deg/s * 0xFFFF + 0x8000
 
     telecommand.extended = 0;
     telecommand.rtr = 0;
@@ -303,7 +303,7 @@ void gr740_candriver_PI_commands(const asn1SccBase_commands_Joints *IN_cmds)
     telecommand.data[1] = velocity & 0x00FF; /* Velocity 0 */
     telecommand.data[2] = (velocity >> 8) & 0x00FF; /* Velocity 1 */
 #ifdef DEBUG
-    printf("[gr740_candriver_PI_commands] Transmitting new velocity command with %u\n", velocity);
+    printf("[gr740_candriver_PI_commands] Transmitting new velocity command in radians: %f in degrees: %f native: %u\n", velocity_rad, velocity_deg, velocity);
 #endif
     cnt = grcan_write(candev, &telecommand, 1);
     if (!cnt)

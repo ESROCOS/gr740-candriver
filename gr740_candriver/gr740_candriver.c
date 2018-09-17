@@ -248,7 +248,8 @@ void gr740_candriver_PI_update()
 	    printf("[gr740_candriver_PI_update] RTR set. Bad device?\n");
 	    return;
 	}
-	if (telemetryResponse.len != 6)
+        // 2018-09-17: Changed length to 7. Last field is sequence counter.
+	if (telemetryResponse.len != 7)
 	{
 	    printf("[gr740_candriver_PI_update] Got length %u. Bad device?\n", telemetryResponse.len);
 	    return;
@@ -288,7 +289,7 @@ void gr740_candriver_PI_commands(const asn1SccBase_commands_Joints *IN_cmds)
     float velocity_deg;
     float velocity_rad;
     int cnt;
-    uint16_t velocity;
+    int16_t velocity;
 
     if (IN_cmds->elements.nCount < 1)
     {
@@ -297,7 +298,7 @@ void gr740_candriver_PI_commands(const asn1SccBase_commands_Joints *IN_cmds)
     }
     velocity_rad = IN_cmds->elements.arr[0].speed;
     velocity_deg = velocity_rad * 180.f / M_PI;
-    velocity = velocity_deg * 0xFFFF / 12.f + 0x8000; // v_in_deg / (720 / 60) deg/s * 0xFFFF + 0x8000
+    velocity = velocity_deg * 60 * 0x7FFF / 360; // First, deg/s is converted to rpm, and then scaled to the range of the variable
 
     telecommand.extended = 0;
     telecommand.rtr = 0;

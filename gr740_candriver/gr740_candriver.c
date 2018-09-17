@@ -213,6 +213,8 @@ void gr740_candriver_PI_update()
 	If we could transmit a request we have to wait for the DEVICE to respond.
 	According to the ICD, we will get ID='0x1A0' RTR=0 LEN=6 T0,T1,P0,P1,V0,V1 where only P0 and P1 will be populated
 	P0,P1 is a position where 0 equals to 0 deg and 0xFFFF equals to 360 deg
+
+        2018-09-17: The ID has been changed to 0x120
     */
     if (requestTransmitted)
     {
@@ -236,7 +238,7 @@ void gr740_candriver_PI_update()
 	    printf("[gr740_candriver_PI_update] Extended ID not supported. Another device present?\n");
 	    return;
 	}
-	if (telemetryResponse.id != 0x1A0)
+	if (telemetryResponse.id != 0x120)
 	{
 	    printf("[gr740_candriver_PI_update] Wrong ID. Another device present?\n");
 	    return;
@@ -279,6 +281,8 @@ void gr740_candriver_PI_commands(const asn1SccBase_commands_Joints *IN_cmds)
         According to the ICD, we have to transmit a frame with ID=0x182 RTR=0 LEN=3 MODE,DEMAND_0,DEMAND_1
 	MODE is either 0 for idle or 2 vor velocity control
 	DEMAND_0,DEMAND_1 is a velocity reference value where 0 means -1 rpm and 0xFFFF means +1 rpm
+
+        2018-09-17: The ID has been changed to 0x102
     */
     
     float velocity_deg;
@@ -297,7 +301,7 @@ void gr740_candriver_PI_commands(const asn1SccBase_commands_Joints *IN_cmds)
 
     telecommand.extended = 0;
     telecommand.rtr = 0;
-    telecommand.id = 0x182;
+    telecommand.id = 0x102;
     telecommand.len = 3;
     telecommand.data[0] = 2; /* Mode: Velocity control */
     telecommand.data[1] = velocity & 0x00FF; /* Velocity 0 */
